@@ -83,8 +83,8 @@ $items = [
 $editsLeft = [
     [
         'title' => 'Gojo vs Sukuna',
-        'video' => '/uploads/edits/gojo_sukuna.mp4',
-        'poster'=> '/uploads/edits/gojo_sukuna.jpg',
+        'video' => '/uploads/edits/Gojo_vs_Sukuna.mp4',
+        'poster'=> '/uploads/edits/Gojo_vs_Sukuna.jpeg',
     ],
     [
         'title' => 'Luffy vs Lucci',
