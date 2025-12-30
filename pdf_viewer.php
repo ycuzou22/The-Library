@@ -20,6 +20,8 @@ if ($mangaId <= 0 || $chNum <= 0) {
 
 $pdo = db();
 
+
+
 $stmt = $pdo->prepare("SELECT id, title FROM mangas WHERE id=?");
 $stmt->execute([$mangaId]);
 $manga = $stmt->fetch();
@@ -31,6 +33,11 @@ $stmt = $pdo->prepare("SELECT id, number, title, pdf_url
 $stmt->execute([$mangaId, $chNum]);
 $chapter = $stmt->fetch();
 if (!$chapter) { http_response_code(404); exit('Chapitre introuvable.'); }
+
+$chapterId = (int)$chapter['id'];
+$pdo->prepare("INSERT INTO chapter_reads (user_id, chapter_id) VALUES (?, ?)
+               ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP")
+    ->execute([(int)$_SESSION['user_id'], $chapterId]);
 
 $pdfUrl = trim((string)($chapter['pdf_url'] ?? ''));
 if ($pdfUrl === '') { http_response_code(404); exit("Aucun PDF pour ce chapitre."); }

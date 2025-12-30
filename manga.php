@@ -19,6 +19,18 @@ if ($mangaId <= 0) {
 
 $pdo = db();
 
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(16));
+}
+$csrf = (string)$_SESSION['csrf'];
+$userId = (int)$_SESSION['user_id'];
+
+$isFav = false;
+$stmt = $pdo->prepare("SELECT 1 FROM favorites WHERE user_id=? AND manga_id=? LIMIT 1");
+$stmt->execute([(int)$_SESSION['user_id'], $mangaId]);
+$isFav = (bool)$stmt->fetchColumn();
+
+
 /** Manga */
 $stmt = $pdo->prepare("
     SELECT id, title, alt_title, status, synopsis, cover_url
@@ -36,18 +48,21 @@ if (!$manga) {
 
 /** Chapitres (réellement uploadés) */
 $stmt = $pdo->prepare("
-    SELECT
-        c.id,
-        c.number,
-        c.title,
-        c.published_at,
-        c.pdf_url,
-        (SELECT COUNT(*) FROM pages p WHERE p.chapter_id = c.id) AS pages_count
-    FROM chapters c
-    WHERE c.manga_id = ?
-    ORDER BY c.number DESC
+  SELECT
+    c.id,
+    c.number,
+    c.title,
+    c.published_at,
+    c.pdf_url,
+    (SELECT COUNT(*) FROM pages p WHERE p.chapter_id = c.id) AS pages_count,
+    cr.read_at AS read_at
+  FROM chapters c
+  LEFT JOIN chapter_reads cr
+    ON cr.chapter_id = c.id AND cr.user_id = ?
+  WHERE c.manga_id = ?
+  ORDER BY c.number DESC
 ");
-$stmt->execute([$mangaId]);
+$stmt->execute([$userId, $mangaId]);
 $chapters = $stmt->fetchAll();
 
 function chapterLink(int $mangaId, array $ch): string
@@ -225,6 +240,40 @@ function chapterLink(int $mangaId, array $ch): string
       font-size:13px;
     }
     code{background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px;border:1px solid var(--stroke)}
+        .chapter.read .chTitle,
+    .chapter.read .chMeta { opacity: .55; }
+    .newBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      margin-left:8px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(34,197,94,.16);
+      font-size:11px;
+      font-weight:900;
+    }
+    @keyframes slowBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .35; }
+    }
+    .newBadge.blink { animation: slowBlink 1.8s ease-in-out infinite; }
+
+    .actionsRight{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    }
+    .smallBtn{
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      padding:7px 10px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .smallBtn.danger{ background: rgba(239,68,68,.14); }
   </style>
 </head>
 <body>
@@ -237,6 +286,14 @@ function chapterLink(int $mangaId, array $ch): string
   <div class="nav">
     <a href="upload_chapter.php">Upload chapitre</a>
     <a href="logout.php">Déconnexion (<?= htmlspecialchars($username) ?>)</a>
+    <form method="post" action="favorite_toggle.php" style="margin:0;display:inline;">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+      <input type="hidden" name="manga_id" value="<?= (int)$mangaId ?>">
+      <input type="hidden" name="back" value="<?= htmlspecialchars("manga.php?id={$mangaId}") ?>">
+      <button type="submit" style="border:1px solid var(--stroke);background:rgba(255,255,255,.04);color:var(--text);padding:8px 12px;border-radius:999px;font-size:13px;cursor:pointer;">
+        <?= $isFav ? '★ Retirer' : '☆ Ajouter' ?>
+      </button>
+    </form>
   </div>
 </header>
 
@@ -262,12 +319,24 @@ function chapterLink(int $mangaId, array $ch): string
       <?php endif; ?>
     </div>
   </section>
-
   <div class="sectionTitle">
     <span>Chapitres (uploadés)</span>
-    <a href="upload_chapter.php">+ Uploader</a>
-  </div>
 
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <a href="upload_chapter.php">+ Uploader</a>
+
+      <form method="post" action="read_reset.php" style="margin:0;">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+        <input type="hidden" name="action" value="reset_all">
+        <input type="hidden" name="manga_id" value="<?= (int)$mangaId ?>">
+        <input type="hidden" name="back" value="<?= htmlspecialchars("manga.php?id={$mangaId}") ?>">
+        <button class="smallBtn danger" type="submit"
+                onclick="return confirm('Réinitialiser le statut LU de tous les chapitres ?');">
+          Tout réinitialiser
+        </button>
+      </form>
+    </div>
+  </div>
   <section class="chapters">
     <?php if (!$chapters): ?>
       <div class="empty">
@@ -279,21 +348,43 @@ function chapterLink(int $mangaId, array $ch): string
         <?php
           $href = chapterLink($mangaId, $ch);
           $isPdf = trim((string)($ch['pdf_url'] ?? '')) !== '';
+          $isRead = !empty($ch['read_at']);
+          $chapterId = (int)$ch['id'];
         ?>
-        <a class="chapter" href="<?= htmlspecialchars($href) ?>">
-          <div class="left">
-            <div class="chTitle">
-              Chapitre <?= (int)$ch['number'] ?>
-              <?= $ch['title'] ? ' — ' . htmlspecialchars((string)$ch['title']) : '' ?>
-              <?= $isPdf ? ' (PDF)' : '' ?>
+        <div class="chapter <?= $isRead ? 'read' : '' ?>" style="display:flex;align-items:center;justify-content:space-between;">
+          <a class="chapter" href="<?= htmlspecialchars($href) ?>" style="flex:1;border-top:none;">
+            <div class="left">
+              <div class="chTitle">
+                Chapitre <?= (int)$ch['number'] ?>
+                <?= $ch['title'] ? ' — ' . htmlspecialchars((string)$ch['title']) : '' ?>
+                <?= $isPdf ? ' (PDF)' : '' ?>
+
+                <?php if (!$isRead): ?>
+                  <span class="newBadge blink">NEW</span>
+                <?php endif; ?>
+              </div>
+              <div class="chMeta">
+                <?= $ch['published_at'] ? 'Publié le ' . htmlspecialchars((string)$ch['published_at']) . ' • ' : '' ?>
+                <?= $isPdf ? 'Lecteur PDF' : ((int)$ch['pages_count'] . ' page(s)') ?>
+                <?= $isRead ? ' • Lu' : '' ?>
+              </div>
             </div>
-            <div class="chMeta">
-              <?= $ch['published_at'] ? 'Publié le ' . htmlspecialchars((string)$ch['published_at']) . ' • ' : '' ?>
-              <?= $isPdf ? 'Lecteur PDF' : ((int)$ch['pages_count'] . ' page(s)') ?>
-            </div>
+            <div class="readBtn">Lire →</div>
+          </a>
+
+          <div class="actionsRight" style="padding:0 12px;">
+            <form method="post" action="read_reset.php" style="margin:0;">
+              <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+              <input type="hidden" name="action" value="reset_one">
+              <input type="hidden" name="chapter_id" value="<?= $chapterId ?>">
+              <input type="hidden" name="back" value="<?= htmlspecialchars("manga.php?id={$mangaId}") ?>">
+              <button class="smallBtn" type="submit" <?= $isRead ? '' : 'disabled' ?>
+                      title="Remettre ce chapitre en non-lu">
+                Reset
+              </button>
+            </form>
           </div>
-          <div class="readBtn">Lire →</div>
-        </a>
+        </div>
       <?php endforeach; ?>
     <?php endif; ?>
   </section>

@@ -21,17 +21,31 @@ if (!$u) {
     http_response_code(404);
     exit("Utilisateur introuvable.");
 }
-$hist = $pdo->prepare("
-  SELECT id, type, url, created_at
-  FROM user_media_history
-  WHERE user_id=?
-  ORDER BY created_at DESC
-  LIMIT 30
-");
-$hist->execute([$viewerId]);
-$mediaHistory = $hist->fetchAll();
+// $hist = $pdo->prepare("
+//   SELECT id, type, url, created_at
+//   FROM user_media_history
+//   WHERE user_id=?
+//   ORDER BY created_at DESC
+//   LIMIT 30
+// ");
+// $hist->execute([$viewerId]);
+// $mediaHistory = $hist->fetchAll();
 
 $isOwner = ($profileId === $viewerId);
+
+$mediaHistory5 = [];
+if ($isOwner) {
+    $stmt = $pdo->prepare("
+      SELECT id, type, url, created_at
+      FROM user_media_history
+      WHERE user_id=?
+      ORDER BY created_at DESC
+      LIMIT 5
+    ");
+    $stmt->execute([$viewerId]);
+    $mediaHistory5 = $stmt->fetchAll();
+}
+
 
 $stmt = $pdo->prepare("
     SELECT id, content, image_url, video_url, audio_url, created_at
@@ -269,27 +283,36 @@ $bio = (string)($u['bio'] ?? '');
 
           <button type="submit">Enregistrer</button>
         </form>
-        <?php if (!empty($mediaHistory)): ?>
-          <div style="margin-top:12px;color:var(--muted);font-size:13px;">Historique (clique pour réutiliser)</div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px;">
-            <?php foreach ($mediaHistory as $h): ?>
-              <div style="border:1px solid var(--stroke);background:rgba(0,0,0,.15);border-radius:14px;overflow:hidden;">
-                <div style="padding:8px 10px;font-weight:800;font-size:12px;color:var(--muted);">
-                  <?= htmlspecialchars((string)$h['type']) ?> • <?= htmlspecialchars((string)$h['created_at']) ?>
-                </div>
-                <div style="aspect-ratio: 16/9; background:#111;">
-                  <img src="<?= htmlspecialchars((string)$h['url']) ?>" alt=""
-                      style="width:100%;height:100%;object-fit:cover;display:block;">
-                </div>
-                <form method="post" action="media_set.php" style="margin:0;padding:10px;">
-                  <input type="hidden" name="hist_id" value="<?= (int)$h['id'] ?>">
-                  <button type="submit" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--stroke);background:rgba(255,255,255,.08);color:var(--text);font-weight:900;cursor:pointer;">
-                    Remettre
-                  </button>
-                </form>
-              </div>
-            <?php endforeach; ?>
+        <?php if ($isOwner): ?>
+          <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div style="color:var(--muted);font-size:13px;">Historique (5 derniers)</div>
+            <a href="history.php" style="text-decoration:none;color:var(--text);border:1px solid var(--stroke);background:rgba(255,255,255,.04);padding:8px 12px;border-radius:999px;font-size:13px;">
+              Voir tout →
+            </a>
           </div>
+          <?php if (!$mediaHistory5): ?>
+            <div class="hint" style="margin-top:8px;">Aucun historique pour le moment.</div>
+          <?php else: ?>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px;">
+              <?php foreach ($mediaHistory5 as $h): ?>
+                <div style="border:1px solid var(--stroke);background:rgba(0,0,0,.15);border-radius:14px;overflow:hidden;">
+                  <div style="padding:8px 10px;font-weight:800;font-size:12px;color:var(--muted);">
+                    <?= htmlspecialchars((string)$h['type']) ?>
+                  </div>
+                  <div style="aspect-ratio:16/9;background:#111;">
+                    <img src="<?= htmlspecialchars((string)$h['url']) ?>" alt=""
+                        style="width:100%;height:100%;object-fit:cover;display:block;">
+                  </div>
+                  <form method="post" action="media_set.php" style="margin:0;padding:10px;">
+                    <input type="hidden" name="hist_id" value="<?= (int)$h['id'] ?>">
+                    <button type="submit" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--stroke);background:rgba(255,255,255,.08);color:var(--text);font-weight:900;cursor:pointer;">
+                      Remettre
+                    </button>
+                  </form>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
         <?php endif; ?>
       </section>
 

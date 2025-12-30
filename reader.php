@@ -11,7 +11,6 @@ require_once __DIR__ . '/config/db.php';
 
 $mangaId = (int)($_GET['manga'] ?? 0);
 $chNum   = (int)($_GET['ch'] ?? 0);
-
 if ($mangaId <= 0 || $chNum <= 0) {
     http_response_code(400);
     echo "Paramètres invalides.";
@@ -19,6 +18,9 @@ if ($mangaId <= 0 || $chNum <= 0) {
 }
 
 $pdo = db();
+
+// Marquer comme lu
+
 
 $stmt = $pdo->prepare("SELECT id, title FROM mangas WHERE id = ?");
 $stmt->execute([$mangaId]);
@@ -31,6 +33,11 @@ $stmt = $pdo->prepare("SELECT id, number, title, published_at, pdf_url
 $stmt->execute([$mangaId, $chNum]);
 $chapter = $stmt->fetch();
 if (!$chapter) { http_response_code(404); exit("Chapitre introuvable."); }
+
+$chapterId = (int)$chapter['id'];
+$pdo->prepare("INSERT INTO chapter_reads (user_id, chapter_id) VALUES (?, ?)
+               ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP")
+    ->execute([(int)$_SESSION['user_id'], $chapterId]);
 
 $pdfUrl = $chapter['pdf_url'] ?? null;
 

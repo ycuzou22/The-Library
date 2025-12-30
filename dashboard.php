@@ -2,6 +2,19 @@
 declare(strict_types=1);
 session_start();
 
+require_once __DIR__ . '/config/db.php';
+$pdo = db();
+
+// Derniers mangas (ou populaires plus tard)
+$stmt = $pdo->query("
+  SELECT id, title, cover_url, status
+  FROM mangas
+  ORDER BY id DESC
+  LIMIT 18
+");
+$featured = $stmt->fetchAll();
+
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -24,16 +37,16 @@ $items = [
         'icon'  => 'upload',
     ],
     [
-        'title' => 'Mes emprunts',
-        'desc'  => 'En cours & historique',
-        'href'  => 'my_borrows.php',
+        'title' => 'Mes favoris',
+        'desc'  => 'Mangas sauvegardés',
+        'href'  => 'favorites.php',
         'icon'  => 'bookmark',
     ],
     [
-        'title' => 'Emprunter',
-        'desc'  => 'Nouvel emprunt',
-        'href'  => 'borrow.php',
-        'icon'  => 'arrow',
+        'title' => 'Simulcast',
+        'desc'  => 'Chapitres sortis (48h)',
+        'href'  => 'simulcast.php',
+        'icon'  => 'bolt',
     ],
     [
         'title' => 'Retours',
@@ -78,6 +91,7 @@ function iconSvg(string $name): string {
         'gear' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.4 7.4 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 7.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.51.4 1.05.71 1.63.94l.36 2.54c.04.24.25.42.49.42h3.8c.24 0 .45-.18.49-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>',
         'upload' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zM12 2l5 5h-3v6h-4V7H7l5-5z"/></svg>',
         'logout' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17v-2h4v-6h-4V7l-5 5 5 5zm9-14H12v2h7v14h-7v2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>',
+        'bolt' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 12-14h-7l-1-6z"/></svg>',
         default => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>',
     };
 }
@@ -209,6 +223,153 @@ function iconSvg(string $name): string {
             padding:6px 10px;
             border-radius:999px;
         }
+        /* --- Netflix row --- */
+        .sectionTitle{
+        max-width:1100px;
+        margin:18px auto 10px;
+        padding:0 18px;
+        display:flex;
+        align-items:baseline;
+        justify-content:space-between;
+        gap:12px;
+        }
+        .sectionTitle h2{
+        margin:0;
+        font-size:14px;
+        letter-spacing:.3px;
+        color:rgba(229,231,235,.92);
+        }
+        .sectionTitle a{
+        text-decoration:none;
+        color:var(--muted);
+        font-size:12.5px;
+        border:1px solid var(--stroke);
+        background: rgba(255,255,255,.04);
+        padding:6px 10px;
+        border-radius:999px;
+        }
+
+        .rowWrap{
+        max-width:1100px;
+        margin:0 auto;
+        padding:0 18px;
+        }
+        .netflixRow{
+        display:flex;
+        gap:12px;
+        overflow:auto;
+        padding:10px 2px 14px;
+        scroll-snap-type:x mandatory;
+        }
+        .netflixRow::-webkit-scrollbar{ height:10px; }
+        .netflixRow::-webkit-scrollbar-thumb{
+        background: rgba(255,255,255,.10);
+        border-radius:999px;
+        }
+        .poster{
+        flex:0 0 auto;
+        width:140px;
+        height:200px;
+        border-radius:14px;
+        border:1px solid var(--stroke);
+        overflow:hidden;
+        position:relative;
+        background: rgba(255,255,255,.05);
+        scroll-snap-align:start;
+        transition: transform .12s ease, border-color .12s ease;
+        }
+        .poster:hover{
+        transform: translateY(-3px) scale(1.02);
+        border-color: rgba(255,255,255,.18);
+        }
+        .poster img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        display:block;
+        filter: saturate(1.05) contrast(1.02);
+        }
+        .poster:after{
+        content:"";
+        position:absolute; inset:0;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.70) 100%);
+        }
+        .poster .meta{
+        position:absolute;
+        left:10px; right:10px; bottom:10px;
+        z-index:2;
+        }
+        .poster .meta .t{
+        font-weight:900;
+        font-size:12.5px;
+        line-height:1.15;
+        }
+        .poster .meta .s{
+        margin-top:5px;
+        font-size:11.5px;
+        color:rgba(167,176,192,.95);
+        display:flex; gap:6px; align-items:center;
+        }
+        .badgeMini{
+        border:1px solid rgba(255,255,255,.14);
+        background: rgba(255,255,255,.06);
+        padding:2px 8px;
+        border-radius:999px;
+        font-size:10.5px;
+        }
+
+        /* grand highlight optionnel */
+        .heroRow{
+        max-width:1100px;
+        margin:10px auto 0;
+        padding:0 18px;
+        }
+        .heroCard{
+        border:1px solid var(--stroke);
+        border-radius:18px;
+        overflow:hidden;
+        background: rgba(255,255,255,.04);
+        display:grid;
+        grid-template-columns: 1.2fr .8fr;
+        }
+        @media (max-width: 860px){ .heroCard{ grid-template-columns:1fr; } }
+        .heroImg{
+        min-height:220px;
+        position:relative;
+        background: radial-gradient(700px 240px at 30% 10%, rgba(99,102,241,.25), transparent 60%),
+                    radial-gradient(700px 240px at 70% 10%, rgba(236,72,153,.18), transparent 60%),
+                    rgba(255,255,255,.03);
+        }
+        .heroImg img{
+        position:absolute; inset:0;
+        width:100%; height:100%;
+        object-fit:cover;
+        filter:saturate(1.05) contrast(1.02);
+        }
+        .heroImg:after{
+        content:""; position:absolute; inset:0;
+        background: linear-gradient(90deg, rgba(0,0,0,.05), rgba(0,0,0,.55));
+        }
+        .heroInfo{
+        padding:14px 14px 16px;
+        display:flex; flex-direction:column; justify-content:center;
+        }
+        .heroInfo h2{margin:0;font-size:18px}
+        .heroInfo p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+        .heroInfo .cta{
+        margin-top:12px;
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        text-decoration:none;
+        color:var(--text);
+        border:1px solid var(--stroke);
+        background: rgba(255,255,255,.06);
+        padding:10px 12px;
+        border-radius:12px;
+        font-weight:900;
+        width:max-content;
+        }
     </style>
 </head>
 <body>
@@ -234,6 +395,71 @@ function iconSvg(string $name): string {
 </header>
 
 <main class="wrap">
+    <?php
+        $hero = $featured[0] ?? null;
+        ?>
+
+        <?php if ($hero): ?>
+        <section class="heroRow">
+            <div class="heroCard">
+            <div class="heroImg">
+                <?php if (!empty($hero['cover_url'])): ?>
+                <img src="<?= htmlspecialchars((string)$hero['cover_url']) ?>" alt="">
+                <?php endif; ?>
+            </div>
+            <div class="heroInfo">
+                <h2><?= htmlspecialchars((string)$hero['title']) ?></h2>
+                <p>
+                Découvre les derniers chapitres uploadés dans ton catalogue.
+                Clique pour ouvrir le menu du manga.
+                </p>
+                <a class="cta" href="manga.php?id=<?= (int)$hero['id'] ?>">Lire →</a>
+            </div>
+            </div>
+        </section>
+        <?php endif; ?>
+
+        <div class="sectionTitle">
+        <h2>Catalogue (style Netflix)</h2>
+        <a href="catalog.php">Voir tout →</a>
+        </div>
+
+        <div class="rowWrap">
+        <div class="netflixRow">
+            <?php foreach ($featured as $m): ?>
+            <?php
+                $img = trim((string)($m['cover_url'] ?? ''));
+                // fallback si pas de cover
+                $fallback = 'data:image/svg+xml;charset=UTF-8,' . rawurlencode(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420">
+                    <defs>
+                    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                        <stop stop-color="#6366f1" offset="0"/>
+                        <stop stop-color="#ec4899" offset="1"/>
+                    </linearGradient>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#g)"/>
+                    <text x="50%" y="52%" font-family="Arial" font-size="28" text-anchor="middle" fill="white" font-weight="700">'
+                    . htmlspecialchars((string)$m['title']) .
+                    '</text>
+                </svg>'
+                );
+                $src = $img !== '' ? $img : $fallback;
+            ?>
+            <a class="poster" href="manga.php?id=<?= (int)$m['id'] ?>" title="<?= htmlspecialchars((string)$m['title']) ?>">
+                <img src="<?= htmlspecialchars($src) ?>" alt="">
+                <div class="meta">
+                <div class="t"><?= htmlspecialchars((string)$m['title']) ?></div>
+                <div class="s">
+                    <?php if (!empty($m['status'])): ?>
+                    <span class="badgeMini"><?= htmlspecialchars((string)$m['status']) ?></span>
+                    <?php endif; ?>
+                </div>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
     <div class="grid">
         <?php foreach ($items as $it): ?>
             <a class="card" href="<?= htmlspecialchars($it['href']) ?>">
