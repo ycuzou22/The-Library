@@ -91,7 +91,7 @@ $editsRight = [
     [
         'title' => 'Naruto vs Pain',
         'video' => '/uploads/edits/Naruto_vs_Pain.mp4',
-        'poster'=> '/uploads/edits/Naruto_vs_Pain.jpg',
+        'poster'=> '/uploads/edits/Naruto_vs_Pain.jpeg',
     ],
     [
         'title' => 'Gon in Rage',
