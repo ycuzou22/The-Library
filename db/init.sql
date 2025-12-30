@@ -41,6 +41,104 @@ CREATE TABLE IF NOT EXISTS pages (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+/* =========================
+   Ajouts sur users
+   ========================= */
+
+ALTER TABLE users
+  ADD COLUMN email VARCHAR(190) NULL AFTER username,
+  ADD COLUMN phone VARCHAR(32) NULL AFTER email,
+  ADD COLUMN avatar_url VARCHAR(255) NULL AFTER phone,
+  ADD COLUMN banner_url VARCHAR(255) NULL AFTER avatar_url,
+  ADD COLUMN bio TEXT NULL AFTER banner_url;
+
+/* (optionnel) rendre email unique si tu veux
+   Attention: si tu as déjà des doublons/NULL ça peut échouer.
+*/
+-- ALTER TABLE users ADD UNIQUE KEY uniq_users_email (email);
+
+
+
+/* =========================
+   Historique avatar/banner
+   ========================= */
+
+CREATE TABLE IF NOT EXISTS user_media_history (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  type ENUM('avatar','banner') NOT NULL,
+  url VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_umh_user_type_date (user_id, type, created_at),
+  CONSTRAINT fk_umh_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+/* =========================
+   Posts profil (texte + image + video + audio)
+   ========================= */
+
+CREATE TABLE IF NOT EXISTS posts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  content TEXT NULL,
+  image_url VARCHAR(255) NULL,
+  video_url VARCHAR(255) NULL,
+  audio_url VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_posts_user_created (user_id, created_at),
+  CONSTRAINT fk_posts_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+/* =========================
+   Favoris mangas
+   ========================= */
+
+CREATE TABLE IF NOT EXISTS favorites (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  manga_id INT UNSIGNED NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_manga (user_id, manga_id),
+  INDEX idx_fav_user_date (user_id, created_at),
+  INDEX idx_fav_manga (manga_id),
+  CONSTRAINT fk_fav_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_fav_manga
+    FOREIGN KEY (manga_id) REFERENCES mangas(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+/* =========================
+   Chapitres lus (NEW / lu)
+   ========================= */
+
+CREATE TABLE IF NOT EXISTS chapter_reads (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  chapter_id INT UNSIGNED NOT NULL,
+  read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_chapter (user_id, chapter_id),
+  INDEX idx_reads_user_date (user_id, read_at),
+  INDEX idx_reads_chapter (chapter_id),
+  CONSTRAINT fk_reads_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_reads_chapter
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------
 -- Données de démo
 -- ---------

@@ -29,8 +29,20 @@ function ensureDir(string $path): void
 
 function normalizeFilesArray(array $files): array
 {
+    if (!isset($files['name'])) return [];
+
+    if (!is_array($files['name'])) {
+        return [[
+            'name' => $files['name'] ?? '',
+            'type' => $files['type'] ?? '',
+            'tmp_name' => $files['tmp_name'] ?? '',
+            'error' => $files['error'] ?? UPLOAD_ERR_NO_FILE,
+            'size' => $files['size'] ?? 0,
+        ]];
+    }
+
     $out = [];
-    $count = is_array($files['name']) ? count($files['name']) : 0;
+    $count = count($files['name']);
     for ($i = 0; $i < $count; $i++) {
         $out[] = [
             'name' => $files['name'][$i] ?? '',
@@ -42,6 +54,7 @@ function normalizeFilesArray(array $files): array
     }
     return $out;
 }
+
 
 function extFromMime(string $mime, string $fallbackName): ?string
 {
@@ -68,7 +81,8 @@ $mangas = $pdo->query("SELECT id, title FROM mangas ORDER BY id DESC")->fetchAll
 
 // POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $mode = trim($_POST['mode'] ?? 'images'); // images | pdf
+    $pdfProvided = isset($_FILES['pdf']) && ($_FILES['pdf']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
+    $imagesProvided = false;
     $mangaId = (int)($_POST['manga_id'] ?? 0);
     $chapterNum = (int)($_POST['chapter_number'] ?? 0);
     $chapterTitle = trim($_POST['chapter_title'] ?? '');
@@ -76,8 +90,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($mangaId <= 0) $errors[] = "Choisis un manga.";
     if ($chapterNum <= 0) $errors[] = "Numéro de chapitre invalide.";
-    if ($mode !== 'images' && $mode !== 'pdf') $errors[] = "Mode invalide.";
-
+    if (isset($_FILES['pages'])) {
+      $tmp = normalizeFilesArray($_FILES['pages']);
+      foreach ($tmp as $f) {
+        if (($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+          $imagesProvided = true;
+          break;
+        }
+      }
+    }
+    $mode = $pdfProvided ? 'pdf' : ($imagesProvided ? 'images' : '');
+    if ($mode === '') {
+      $errors[] = "Ajoute un PDF OU des images.";
+    }
+    if ($pdfProvided && $imagesProvided) {
+      $errors[] = "Choisis soit un PDF, soit des images (pas les deux).";
+    }
     try {
         if (!$errors) {
             // Vérifier manga
@@ -274,12 +302,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <label>Titre du chapitre (optionnel)</label>
       <input type="text" name="chapter_title" placeholder="ex: Le début">
-
-      <div class="mode">
-        <label><input type="radio" name="mode" value="pdf" checked> PDF</label>
-        <label><input type="radio" name="mode" value="images"> Images</label>
-      </div>
-
       <div class="card" style="margin-top:12px">
         <b>Mode PDF</b>
         <input type="file" name="pdf" accept="application/pdf">
