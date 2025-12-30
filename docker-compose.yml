@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  php:
+    build: .
+    container_name: php-library
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_NAME: library
+      DB_USER: library_user
+      DB_PASS: library_pass
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.4
+    container_name: mysql-library
+    environment:
+      MYSQL_DATABASE: library
+      MYSQL_USER: library_user
+      MYSQL_PASSWORD: library_pass
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pma-library
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpass
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  db_data:
