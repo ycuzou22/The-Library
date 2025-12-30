@@ -1,66 +1,79 @@
 <?php
-require_once 'App/classes/Book.php';
-require_once 'App/classes/User.php';
-require_once 'App/classes/Borrow.php';
-require_once 'App/classes/Library.php';
-
-$biblio = new Library();
-
-/** -----------------------------
- *  1) Générer des utilisateurs
- *  ----------------------------*/
-$users = [
-    new User("Alice"),
-    new User("Bob"),
-    new User("Chloé"),
-    new User("David"),
-    new User("Emma"),
-    new User("Farid"),
-    new User("Inès"),
-    new User("Julien"),
-];
-
-/** -----------------------------
- *  2) Générer des livres
- *  ----------------------------*/
-$books = [
-    new Book("1984", "George Orwell", 328),
-    new Book("Le Petit Prince", "Antoine de Saint-Exupéry", 96),
-    new Book("L'Étranger", "Albert Camus", 184),
-    new Book("Harry Potter à l'école des sorciers", "J.K. Rowling", 320),
-    new Book("Dune", "Frank Herbert", 688),
-    new Book("Les Misérables", "Victor Hugo", 1463),
-    new Book("Fondation", "Isaac Asimov", 296),
-    new Book("Le Seigneur des Anneaux", "J.R.R. Tolkien", 1216),
-    new Book("La Peste", "Albert Camus", 288),
-    new Book("Germinal", "Émile Zola", 592),
-];
-
-/** -----------------------------
- *  3) Générer des emprunts
- *  ----------------------------*/
-$nbBorrows = 20;
-
-for ($i = 0; $i < $nbBorrows; $i++) {
-    $user = $users[array_rand($users)];
-    $book = $books[array_rand($books)];
-    $borrowDate = new DateTimeImmutable('2024-01-01');
-    $borrowDate = $borrowDate->modify('+' . random_int(0, 90) . ' days');
-    $borrow = new Borrow($user, $book, $borrowDate);
-    $biblio->addBorrow($borrow);
-    if (random_int(1, 100) <= 60) {
-        $returnDate = $borrowDate->modify('+' . random_int(1, 30) . ' days');
-        $borrow->setReturnDate($returnDate);
-    }
-}
-
-/** -----------------------------
- *  4) Afficher tous les emprunts
- *  ----------------------------*/
-echo "<h2>Liste des emprunts</h2>";
-
-foreach ($biblio->getBorrows() as $b) {
-    echo $b . "\n";
-}
-$biblio->returnBook($book, new DateTimeImmutable("2024-01-10"));
+declare(strict_types=1);
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Library — Accueil</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            width: 360px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        a.button {
+            display: block;
+            text-decoration: none;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-weight: bold;
+            color: white;
+            background: #007bff;
+        }
+
+        a.button.register {
+            background: #28a745;
+        }
+
+        a.button:hover {
+            opacity: 0.9;
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 0.85em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📚 Library</h1>
+    <p>Bienvenue sur votre bibliothèque en ligne</p>
+
+    <a href="login.php" class="button">Se connecter</a>
+    <a href="register.php" class="button register">S’inscrire</a>
+
+    <footer>
+        Projet PHP POO — Localhost
+    </footer>
+</div>
+
+</body>
+</html>
