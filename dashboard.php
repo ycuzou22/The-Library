@@ -49,12 +49,6 @@ $items = [
         'icon'  => 'bolt',
     ],
     [
-        'title' => 'Retours',
-        'desc'  => 'Rendre un livre',
-        'href'  => 'returns.php',
-        'icon'  => 'refresh',
-    ],
-    [
         'title' => 'Ajouter un livre',
         'desc'  => 'Admin / gestion',
         'href'  => 'add_book.php',
@@ -96,13 +90,13 @@ $editsLeft = [
 $editsRight = [
     [
         'title' => 'Naruto vs Pain',
-        'video' => '/uploads/edits/naruto_pain.mp4',
-        'poster'=> '/uploads/edits/naruto_pain.jpg',
+        'video' => '/uploads/edits/Naruto_vs_Pain.mp4',
+        'poster'=> '/uploads/edits/Naruto_vs_Pain.jpg',
     ],
     [
-        'title' => 'Ichigo vs Ulquiorra',
-        'video' => '/uploads/edits/ichigo_ulquiorra.mp4',
-        'poster'=> '/uploads/edits/ichigo_ulquiorra.jpg',
+        'title' => 'Gon in Rage',
+        'video' => '/uploads/edits/Gon_Rage.mp4',
+        'poster'=> '/uploads/edits/Gon_Rage.jpg',
     ],
 ];
 
