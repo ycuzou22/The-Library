@@ -49,12 +49,6 @@ $items = [
         'icon'  => 'bolt',
     ],
     [
-        'title' => 'Retours',
-        'desc'  => 'Rendre un livre',
-        'href'  => 'returns.php',
-        'icon'  => 'refresh',
-    ],
-    [
         'title' => 'Ajouter un livre',
         'desc'  => 'Admin / gestion',
         'href'  => 'add_book.php',
@@ -77,6 +71,32 @@ $items = [
         'desc'  => 'Quitter la session',
         'href'  => 'logout.php',
         'icon'  => 'logout',
+    ],
+];
+
+$editsLeft = [
+    [
+        'title' => 'Gojo vs Sukuna',
+        'video' => '/uploads/edits/Gojo_vs_Sukuna.mp4',
+        'poster'=> '/uploads/edits/Gojo_vs_Sukuna.jpeg',
+    ],
+    [
+        'title' => 'Luffy vs Lucci',
+        'video' => '/uploads/edits/Luffy_vs_Lucci_Gear_5.mp4',
+        'poster'=> '/uploads/edits/Luffy_vs_Lucci.jpg',
+    ],
+];
+
+$editsRight = [
+    [
+        'title' => 'Naruto vs Pain',
+        'video' => '/uploads/edits/Naruto_vs_Pain.mp4',
+        'poster'=> '/uploads/edits/Naruto_vs_Pain.jpeg',
+    ],
+    [
+        'title' => 'Gon in Rage',
+        'video' => '/uploads/edits/Gon_Rage.mp4',
+        'poster'=> '/uploads/edits/Gon_Rage.jpg',
     ],
 ];
 
@@ -370,6 +390,119 @@ function iconSvg(string $name): string {
         font-weight:900;
         width:max-content;
         }
+        /* --- Sidebars edits --- */
+        :root{
+        --sideW: 220px;
+        --gapSide: 18px;
+        }
+
+        /* Layout global avec bandes latérales */
+        .layout{
+        max-width: calc(1100px + (var(--sideW) * 2) + (var(--gapSide) * 2));
+        margin: 0 auto;
+        padding: 0 18px 36px;
+        display: grid;
+        grid-template-columns: var(--sideW) minmax(0, 1100px) var(--sideW);
+        gap: var(--gapSide);
+        }
+
+        /* Ton main actuel devient "maincol" */
+        .maincol{ min-width:0; }
+
+        /* Bandes latérales */
+        .sidebar{
+        position: sticky;
+        top: 16px;
+        align-self: start;
+        height: calc(100vh - 32px);
+        overflow: auto;
+        padding-right: 2px;
+        }
+        .sidebar::-webkit-scrollbar{ width:10px; }
+        .sidebar::-webkit-scrollbar-thumb{
+        background: rgba(255,255,255,.10);
+        border-radius: 999px;
+        }
+
+        .sideCard{
+        border: 1px solid var(--stroke);
+        background: rgba(255,255,255,.04);
+        border-radius: 16px;
+        padding: 12px;
+        }
+        .sideTitle{
+        margin: 0 0 10px;
+        font-size: 12.5px;
+        letter-spacing: .3px;
+        color: rgba(229,231,235,.92);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        }
+        .sideTitle .tag{
+        font-size: 10.5px;
+        color: var(--muted);
+        border: 1px solid var(--stroke);
+        background: rgba(255,255,255,.04);
+        padding: 3px 8px;
+        border-radius: 999px;
+        }
+
+        .editGrid{
+        display: grid;
+        gap: 10px;
+        }
+
+        .edit{
+        border: 1px solid var(--stroke);
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(255,255,255,.05);
+        }
+        .editMedia{
+        position: relative;
+        aspect-ratio: 9 / 16;   /* format shorts */
+        background: rgba(255,255,255,.03);
+        }
+        .editMedia video{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display:block;
+        }
+        .editMedia:after{
+        content:"";
+        position:absolute; inset:0;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,.75) 100%);
+        pointer-events:none;
+        }
+        .editMeta{
+        position:absolute;
+        left:10px; right:10px; bottom:10px;
+        z-index:2;
+        }
+        .editMeta .t{
+        font-weight: 900;
+        font-size: 12px;
+        line-height: 1.15;
+        }
+        .editMeta .sub{
+        margin-top: 5px;
+        font-size: 11px;
+        color: rgba(167,176,192,.95);
+        }
+
+        @media (max-width: 1180px){
+        /* sur écrans moyens, on enlève la bande droite */
+        .layout{ grid-template-columns: var(--sideW) minmax(0, 1100px); }
+        .sidebar.right{ display:none; }
+        }
+        @media (max-width: 920px){
+        /* sur mobile/tablette, on enlève les 2 bandes */
+        .layout{ grid-template-columns: 1fr; }
+        .sidebar{ display:none; }
+        }
     </style>
 </head>
 <body>
@@ -394,87 +527,159 @@ function iconSvg(string $name): string {
     </div>
 </header>
 
-<main class="wrap">
-    <?php
+<div class="layout">
+
+  <!-- Bande gauche -->
+  <aside class="sidebar left">
+    <div class="sideCard">
+      <div class="sideTitle">
+        <span>Edits combats</span>
+        <span class="tag">Gauche</span>
+      </div>
+
+      <div class="editGrid">
+        <?php foreach ($editsLeft as $e): ?>
+          <div class="edit">
+            <div class="editMedia">
+              <video
+                src="<?= htmlspecialchars($e['video']) ?>"
+                poster="<?= htmlspecialchars($e['poster']) ?>"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                onmouseenter="this.play()"
+                onmouseleave="this.pause(); this.currentTime=0;"
+              ></video>
+              <div class="editMeta">
+                <div class="t"><?= htmlspecialchars($e['title']) ?></div>
+                <div class="sub">Hover pour jouer</div>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Colonne centrale (ton dashboard) -->
+  <main class="maincol">
+    <div class="wrap" style="max-width:1100px;margin:0;padding:10px 0 36px;">
+      <?php
         $hero = $featured[0] ?? null;
-        ?>
+      ?>
 
-        <?php if ($hero): ?>
-        <section class="heroRow">
-            <div class="heroCard">
-            <div class="heroImg">
-                <?php if (!empty($hero['cover_url'])): ?>
-                <img src="<?= htmlspecialchars((string)$hero['cover_url']) ?>" alt="">
-                <?php endif; ?>
-            </div>
-            <div class="heroInfo">
-                <h2><?= htmlspecialchars((string)$hero['title']) ?></h2>
-                <p>
-                Découvre les derniers chapitres uploadés dans ton catalogue.
-                Clique pour ouvrir le menu du manga.
-                </p>
-                <a class="cta" href="manga.php?id=<?= (int)$hero['id'] ?>">Lire →</a>
-            </div>
-            </div>
-        </section>
-        <?php endif; ?>
+      <?php if ($hero): ?>
+      <section class="heroRow">
+        <div class="heroCard">
+          <div class="heroImg">
+            <?php if (!empty($hero['cover_url'])): ?>
+              <img src="<?= htmlspecialchars((string)$hero['cover_url']) ?>" alt="">
+            <?php endif; ?>
+          </div>
+          <div class="heroInfo">
+            <h2><?= htmlspecialchars((string)$hero['title']) ?></h2>
+            <p>Découvre les derniers chapitres uploadés dans ton catalogue. Clique pour ouvrir le menu du manga.</p>
+            <a class="cta" href="manga.php?id=<?= (int)$hero['id'] ?>">Lire →</a>
+          </div>
+        </div>
+      </section>
+      <?php endif; ?>
 
-        <div class="sectionTitle">
+      <div class="sectionTitle">
         <h2>Catalogue (style Netflix)</h2>
         <a href="catalog.php">Voir tout →</a>
-        </div>
+      </div>
 
-        <div class="rowWrap">
+      <div class="rowWrap" style="max-width:1100px;margin:0;padding:0;">
         <div class="netflixRow">
-            <?php foreach ($featured as $m): ?>
+          <?php foreach ($featured as $m): ?>
             <?php
-                $img = trim((string)($m['cover_url'] ?? ''));
-                // fallback si pas de cover
-                $fallback = 'data:image/svg+xml;charset=UTF-8,' . rawurlencode(
+              $img = trim((string)($m['cover_url'] ?? ''));
+              $fallback = 'data:image/svg+xml;charset=UTF-8,' . rawurlencode(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420">
-                    <defs>
+                  <defs>
                     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                        <stop stop-color="#6366f1" offset="0"/>
-                        <stop stop-color="#ec4899" offset="1"/>
+                      <stop stop-color="#6366f1" offset="0"/>
+                      <stop stop-color="#ec4899" offset="1"/>
                     </linearGradient>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#g)"/>
-                    <text x="50%" y="52%" font-family="Arial" font-size="28" text-anchor="middle" fill="white" font-weight="700">'
-                    . htmlspecialchars((string)$m['title']) .
-                    '</text>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#g)"/>
+                  <text x="50%" y="52%" font-family="Arial" font-size="28" text-anchor="middle" fill="white" font-weight="700">'
+                  . htmlspecialchars((string)$m['title']) .
+                  '</text>
                 </svg>'
-                );
-                $src = $img !== '' ? $img : $fallback;
+              );
+              $src = $img !== '' ? $img : $fallback;
             ?>
             <a class="poster" href="manga.php?id=<?= (int)$m['id'] ?>" title="<?= htmlspecialchars((string)$m['title']) ?>">
-                <img src="<?= htmlspecialchars($src) ?>" alt="">
-                <div class="meta">
+              <img src="<?= htmlspecialchars($src) ?>" alt="">
+              <div class="meta">
                 <div class="t"><?= htmlspecialchars((string)$m['title']) ?></div>
                 <div class="s">
-                    <?php if (!empty($m['status'])): ?>
+                  <?php if (!empty($m['status'])): ?>
                     <span class="badgeMini"><?= htmlspecialchars((string)$m['status']) ?></span>
-                    <?php endif; ?>
+                  <?php endif; ?>
                 </div>
-                </div>
+              </div>
             </a>
-            <?php endforeach; ?>
+          <?php endforeach; ?>
         </div>
-    </div>
-    <div class="grid">
-        <?php foreach ($items as $it): ?>
-            <a class="card" href="<?= htmlspecialchars($it['href']) ?>">
-                <div class="ic"><?= iconSvg($it['icon']) ?></div>
-                <h3><?= htmlspecialchars($it['title']) ?></h3>
-                <p><?= htmlspecialchars($it['desc']) ?></p>
-            </a>
-        <?php endforeach; ?>
-    </div>
+      </div>
 
-    <div class="footer">
+      <div class="grid">
+        <?php foreach ($items as $it): ?>
+          <a class="card" href="<?= htmlspecialchars($it['href']) ?>">
+            <div class="ic"><?= iconSvg($it['icon']) ?></div>
+            <h3><?= htmlspecialchars($it['title']) ?></h3>
+            <p><?= htmlspecialchars($it['desc']) ?></p>
+          </a>
+        <?php endforeach; ?>
+      </div>
+
+      <div class="footer">
         <div class="pill">⬆️ Astuce : utilise “Upload chapitre” pour ajouter tes pages et lire dans reader.php</div>
         <div class="pill">🖼️ Les images seront servies depuis /uploads/…</div>
+      </div>
     </div>
-</main>
+  </main>
+
+  <!-- Bande droite -->
+  <aside class="sidebar right">
+    <div class="sideCard">
+      <div class="sideTitle">
+        <span>Edits combats</span>
+        <span class="tag">Droite</span>
+      </div>
+
+      <div class="editGrid">
+        <?php foreach ($editsRight as $e): ?>
+          <div class="edit">
+            <div class="editMedia">
+              <video
+                src="<?= htmlspecialchars($e['video']) ?>"
+                poster="<?= htmlspecialchars($e['poster']) ?>"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                onmouseenter="this.play()"
+                onmouseleave="this.pause(); this.currentTime=0;"
+              ></video>
+              <div class="editMeta">
+                <div class="t"><?= htmlspecialchars($e['title']) ?></div>
+                <div class="sub">Hover pour jouer</div>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+    </div>
+  </aside>
+
+</div>
+
 
 </body>
 </html>
